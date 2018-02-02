@@ -1,0 +1,129 @@
+---
+title: "Course Project"
+author: "Veronica Vaca"
+date: "31 de enero de 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The goal of this project is to predict the manner in which some people perform barbell lifts. We will use some variables in the data to do it. We are going to show:
+
+- How the model was built.
+- How was used cross validation in it.
+- Expected out of sample error. 
+- Conclusion and explanation. 
+- Predict 20 different test cases.
+
+## Data
+
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har.
+
+```{r,echo=FALSE}
+#Load libraries
+library(caret);library(rpart);library(rpart.plot);library(RColorBrewer)
+library(rattle);library(randomForest);library(knitr);require(RANN)
+
+#Download the data
+if(!file.exists("pml-training.csv")){download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile = "pml-training.csv")}
+
+if(!file.exists("pml-testing.csv")){download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", destfile = "pml-testing.csv")}
+
+
+#Read the training data and replace empty values by NA
+trainingDataSet<- read.csv("pml-training.csv", sep=",", header=TRUE, na.strings = c("NA","",'#DIV/0!'))
+testingDataSet<- read.csv("pml-testing.csv", sep=",", header=TRUE, na.strings = c("NA","",'#DIV/0!'))
+
+```
+
+## Cleaning the data
+
+Removing variables that are not usable that have nearly zero variance, variables that are almost always NA, and variables that don’t make intuitive sense for prediction.
+
+```{r, echo =F}
+
+trainingDataSet <- trainingDataSet[,(colSums(is.na(trainingDataSet)) == 0)]
+
+testingDataSet <- testingDataSet[,(colSums(is.na(testingDataSet)) == 0)]
+
+
+numericalsIdx <- which(lapply(trainingDataSet, class) %in% "numeric")
+
+preprocessModel <-preProcess(trainingDataSet[,numericalsIdx],method=c('knnImpute', 'center', 'scale'))
+pre_trainingDataSet <- predict(preprocessModel, trainingDataSet[,numericalsIdx])
+pre_trainingDataSet$classe <- trainingDataSet$classe
+
+pre_testingDataSet <-predict(preprocessModel,testingDataSet[,numericalsIdx])
+
+
+nzv <- nearZeroVar(pre_trainingDataSet,saveMetrics=TRUE)
+pre_trainingDataSet <- pre_trainingDataSet[,nzv$nzv==FALSE]
+
+nzv <- nearZeroVar(pre_testingDataSet,saveMetrics=TRUE)
+pre_testingDataSet <- pre_testingDataSet[,nzv$nzv==FALSE]
+
+```
+
+
+## Building the model
+
+For reproducibility we are going to set a seed and then subseting for having a training and a test set.
+
+```{r}
+set.seed(2000)
+
+idxTrain<- createDataPartition(pre_trainingDataSet$classe, p=3/4, list=FALSE)
+training<- pre_trainingDataSet[idxTrain, ]
+validation <- pre_trainingDataSet[-idxTrain, ]
+dim(training) ; dim(validation)
+
+```
+
+We will start with the Decision Trees
+
+```{r}
+modFitdt<-rpart(classe ~ ., data=training, method="class")
+fancyRpartPlot(modFitdt,cex=.3,under.cex=0.2,shadow.offset=0)
+
+```
+
+Now we'll see the accuracy
+
+```{r}
+predictiondt <- predict(modFitdt, validation, type = c("raw"))
+
+confusionMatrix(validation$classe,predictiondt)
+
+```
+
+We can see that Decission Trees are not a good model
+Then we'll test the Random Forest
+
+```{r}
+
+modFitrf <- train(classe ~., method="rf", data=training, trControl=trainControl(method='cv'), number=5, allowParallel=TRUE, importance=TRUE )
+modFitrf
+
+
+```
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
