@@ -1,8 +1,10 @@
 ---
 title: "Course Project"
 author: "Veronica Vaca"
-date: "31 de enero de 2018"
-output: word_document
+date: "23 de Marzo de 2018"
+output:
+  html_document: default
+  word_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -100,30 +102,73 @@ fancyRpartPlot(modFitdt,cex=.3,under.cex=0.2,shadow.offset=0)
 Now we'll see the accuracy
 
 ```{r}
-predictiondt <- predict(modFitdt, validation, type = c("raw"))
+predictiondt <- predict(modFitdt, validation, type = "class")
 
-confusionMatrix(validation$classe,predictiondt)
+cmtr<-confusionMatrix(validation$classe,predictiondt)
+cmtr
+```
+
+We have an accuracy of 0.69
+
+
+```{r}
+plot(cmtr$table, col = cmtr$byClass, main = paste("Decission Trees Confusion Matrix: Accuracy =", round(cmtr$overall['Accuracy'], 4)))
 
 ```
 
-We can see that Decission Trees are not a good model
-Then we'll test the Random Forest
+
+## Random Forest
+
+Then we'll test the Random Forest for comparisson
 
 ```{r}
 
-modFitrf <- train(classe ~., method="rf", data=training, trControl=trainControl(method='cv'), number=5, allowParallel=TRUE, importance=TRUE )
-modFitrf
+set.seed(4444)
+modFitrf <- randomForest(classe ~ ., data=training)
+predictionrf <- predict(modFitrf, validation, type = "class")
+cmrf2 <- confusionMatrix(predictionrf, validation$classe)
+cmrf2
 
 
 ```
 
+The random forest model has a 99.4% accuracy, far superior to the rpart method. The specificity and sensitivity is in the high 90s for all variables. 
 
-## Including Plots
+```{r}
+plot(cmrf2$table, col = cmrf2$byClass, main = paste("Random Forest Confusion Matrix: Accuracy =", round(cmrf2$overall['Accuracy'], 4)))
 
-You can also embed plots, for example:
+```
+
+
+## Cross Validation
+
+The cross-validated error for the decision tree is scaled down for easier reading; the error bars on the plot show one standard deviation of the x-validated error.
 
 ```{r pressure, echo=FALSE}
-plot(pressure)
+plotcp(modFitdt)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+For random forests, there is no need for cross-validation or a separate test set to get an unbiased estimate of the test set error. It is estimated internally , during the run.
+
+
+## In Sample & Out of Sample Error
+
+
+The in sample error is error rate when the model is used to predict the training set it is based off. This error is going to be much less than the model predicting another dataset (out of sample error).
+
+```{r}
+insampledt <- predict(modFitdt, training, type = "class")
+confusionMatrix(insampledt, training$classe)
+insamplerf <- predict(modFitrf, training, type = "class")
+confusionMatrix(insamplerf, training$classe)
+
+```
+
+We have for decission trees that the accuracy is over 60% the in sample error is by 40%
+when we use random forests the submitted answer resulted in 100% with 0% in sample error. This could be a sign of overfitting. 
+
+The out of sample error will be tested with other samples of subjets. 
+
+## Conclusion
+Random Forest was a superior model for prediction of exercise quality compared to rpart decission trees, had over 99% accuracy and fitted well to other subsamples of the data. However, the algorithm may not have as high of accuracy on other samples, particularly ones with different subjects.
+
