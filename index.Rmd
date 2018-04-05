@@ -1,7 +1,7 @@
 ---
 title: "Course Project"
 author: "Veronica Vaca"
-date: "23 de Marzo de 2018"
+date: "05 de Abril de 2018"
 output:
   html_document: default
   word_document: default
@@ -31,11 +31,13 @@ https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 
 The data for this project come from this source: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har.
 
-```{r,echo=FALSE}
+```{r results='hide', message=FALSE, warning=FALSE,echo=FALSE}
 #Load libraries
 library(caret);library(rpart);library(rpart.plot);library(RColorBrewer)
-library(rattle);library(randomForest);library(knitr);require(RANN)
-
+library(rattle);library(randomForest);library(knitr);require(RANN);require(e1071)
+```
+Now we are going to download the data
+```{r}
 #Download the data
 if(!file.exists("pml-training.csv")){download.file("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", destfile = "pml-training.csv")}
 
